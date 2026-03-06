@@ -1,0 +1,10 @@
+# Raw data in BigQuery (loaded by PaceWise extract)
+version: 2
+sources:
+  - name: pacewise_raw
+    description: Raw Strava activities loaded by the PaceWise ELT pipeline
+    database: "{{ env_var('BIGQUERY_PROJECT_ID') }}"
+    schema: "{{ env_var('BIGQUERY_DATASET', 'pacewise_raw') }}"
+    tables:
+      - name: activities
+        description: Raw activity records from Strava API

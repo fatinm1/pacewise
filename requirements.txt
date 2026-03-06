@@ -1,0 +1,6 @@
+# PaceWise: Python 3.11
+apache-airflow==2.8.0
+google-cloud-bigquery
+dbt-bigquery
+requests
+python-dotenv

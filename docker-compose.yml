@@ -1,0 +1,65 @@
+# PaceWise: Airflow + Postgres for local orchestration.
+# Mounts DAGs, dbt project, and project root so extract package is importable.
+# Load env from .env (copy from .env.example and fill in).
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    env_file: .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
+      # So PythonOperator can import extract.runner
+      PYTHONPATH: /opt/pacewise
+      PACEWISE_PROJECT_ROOT: /opt/pacewise
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./dbt:/dbt
+      - .:/opt/pacewise
+    ports:
+      - "8080:8080"
+    command: webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    env_file: .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      PYTHONPATH: /opt/pacewise
+      PACEWISE_PROJECT_ROOT: /opt/pacewise
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./dbt:/dbt
+      - .:/opt/pacewise
+    command: scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

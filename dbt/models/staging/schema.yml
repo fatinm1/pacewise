@@ -1,0 +1,10 @@
+version: 2
+models:
+  - name: stg_activities
+    description: Staging view of raw Strava activities with standardized types and pace.
+    columns:
+      - name: activity_id
+        description: Unique Strava activity ID
+        tests:
+          - not_null
+          - unique

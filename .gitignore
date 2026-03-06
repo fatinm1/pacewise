@@ -1,0 +1,8 @@
+.env
+strava_tokens.json
+dbt/target/
+dbt/dbt_packages/
+*.pyc
+__pycache__/
+.venv/
+venv/

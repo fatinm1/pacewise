@@ -1,0 +1,11 @@
+# dbt BigQuery profile for PaceWise (use env vars in production)
+pacewise:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth  # or service-account with keyfile
+      project: "{{ env_var('BIGQUERY_PROJECT_ID') }}"
+      dataset: pacewise
+      threads: 4
+      timeout_seconds: 300
