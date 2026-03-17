@@ -1,0 +1,43 @@
+FROM apache/airflow:2.8.0
+
+# Install system deps and Node.js 18 for the Next.js frontend
+USER root
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates gnupg && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends nodejs supervisor && \
+    rm -rf /var/lib/apt/lists/*
+
+USER airflow
+
+WORKDIR /opt/pacewise
+
+# Python dependencies for Airflow tasks, BigQuery, dbt, etc.
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the whole project (Airflow DAGs, extract, dbt, frontend)
+COPY . .
+
+# Link Airflow DAGs into AIRFLOW_HOME and dbt into /dbt as expected by the DAG
+RUN mkdir -p /opt/airflow/dags && \
+    ln -s /opt/pacewise/airflow/dags /opt/airflow/dags/pacewise && \
+    ln -s /opt/pacewise/dbt /dbt
+
+# Build the Next.js frontend
+WORKDIR /opt/pacewise/pacewise-frontend
+RUN npm install && npm run build
+
+WORKDIR /opt/pacewise
+
+# Supervisor config and entrypoint
+COPY supervisord-airflow.conf /etc/supervisor/conf.d/supervisord-airflow.conf
+COPY railway-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
+RUN chmod +x /usr/local/bin/railway-entrypoint.sh
+
+EXPOSE 8080 3000
+
+ENTRYPOINT ["/usr/local/bin/railway-entrypoint.sh"]

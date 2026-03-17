@@ -176,6 +176,20 @@ pacewise/
 - **Google Cloud** account with BigQuery enabled
 - **Strava** developer account ([strava.com/settings/api](https://www.strava.com/settings/api))
 
+### 🚀 Deploying on Railway (high level)
+
+You can deploy PaceWise to Railway with **two services**:
+
+- **App service**: builds `Dockerfile.railway`, runs Airflow (webserver + scheduler) and the Next.js dashboard in one container.\n- **Database service**: a managed Postgres instance for Airflow metadata (BigQuery remains your analytics warehouse).
+
+At a high level:
+
+1. Push this repo to GitHub (already done if you are reading this there).
+2. In Railway, create a **Postgres** service (DB cell) and note its connection URL.
+3. Create a **new service from repo** using `Dockerfile.railway` as the Dockerfile.\n4. Set environment variables on the app service:\n   - `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` = Railway Postgres URL (sqlalchemy format)\n   - `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`\n   - `GOOGLE_APPLICATION_CREDENTIALS` (path to mounted service-account key)\n   - `BIGQUERY_PROJECT_ID`, `BIGQUERY_DATASET`\n   - `AIRFLOW_ADMIN_EMAIL` (optional)\n5. Expose port **3000** for the Next.js dashboard (and optionally 8080 for Airflow via a reverse proxy or Railway settings).
+
+`Dockerfile.railway`, `railway-entrypoint.sh`, and `supervisord-airflow.conf` are set up so a single Railway app cell can run **Airflow + the dashboard** together.
+
 ### Step 1 — Clone the repo
 
 ```bash
