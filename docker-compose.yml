@@ -32,7 +32,7 @@ services:
       PACEWISE_PROJECT_ROOT: /opt/pacewise
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - ./dbt:/dbt
+      - ./dbt:/opt/pacewise/dbt
       - .:/opt/pacewise
     ports:
       - "8080:8080"
@@ -54,7 +54,7 @@ services:
       PACEWISE_PROJECT_ROOT: /opt/pacewise
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - ./dbt:/dbt
+      - ./dbt:/opt/pacewise/dbt
       - .:/opt/pacewise
     command: scheduler
     depends_on:

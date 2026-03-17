@@ -64,19 +64,19 @@ with DAG(
 
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command="cd /dbt && dbt run",
+        bash_command="cd /opt/pacewise/dbt && dbt run",
         env={
             **os.environ,
-            "DBT_PROFILES_DIR": "/dbt",
+            "DBT_PROFILES_DIR": "/opt/pacewise/dbt",
         },
     )
 
     dbt_test = BashOperator(
         task_id="dbt_test",
-        bash_command="cd /dbt && dbt test",
+        bash_command="cd /opt/pacewise/dbt && dbt test",
         env={
             **os.environ,
-            "DBT_PROFILES_DIR": "/dbt",
+            "DBT_PROFILES_DIR": "/opt/pacewise/dbt",
         },
     )
 
