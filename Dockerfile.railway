@@ -22,10 +22,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the whole project (Airflow DAGs, extract, dbt, frontend)
 COPY . .
 
-# Link Airflow DAGs into AIRFLOW_HOME and dbt into /dbt as expected by the DAG
+# Link Airflow DAGs into AIRFLOW_HOME and dbt into /dbt as expected by the DAG.
+# Use conditional symlinks so the build is idempotent even if paths already exist.
 RUN mkdir -p /opt/airflow/dags && \
-    ln -s /opt/pacewise/airflow/dags /opt/airflow/dags/pacewise && \
-    ln -s /opt/pacewise/dbt /dbt
+    if [ ! -e /opt/airflow/dags/pacewise ]; then ln -s /opt/pacewise/airflow/dags /opt/airflow/dags/pacewise; fi && \
+    if [ ! -e /dbt ]; then ln -s /opt/pacewise/dbt /dbt; fi
 
 # Build the Next.js frontend
 WORKDIR /opt/pacewise/pacewise-frontend
