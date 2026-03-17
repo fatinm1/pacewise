@@ -11,6 +11,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends nodejs supervisor && \
     rm -rf /var/lib/apt/lists/*
 
+# Switch to airflow user for Python deps and app code (per Airflow docs)
+USER airflow
+
 WORKDIR /opt/pacewise
 
 # Python dependencies for Airflow tasks, BigQuery, dbt, etc.
@@ -30,12 +33,15 @@ RUN npm install && npm run build
 
 WORKDIR /opt/pacewise
 
-# Supervisor config and entrypoint (still as root so we can chmod)
+# Switch back to root briefly for installing entrypoint into /usr/local/bin
+USER root
+
+# Supervisor config and entrypoint (chmod requires root)
 COPY supervisord-airflow.conf /etc/supervisor/conf.d/supervisord-airflow.conf
 COPY railway-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
 RUN chmod +x /usr/local/bin/railway-entrypoint.sh
 
-# Switch back to airflow user for runtime
+# Runtime as airflow user
 USER airflow
 
 EXPOSE 8080 3000
