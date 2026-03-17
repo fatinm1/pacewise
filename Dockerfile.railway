@@ -1,6 +1,6 @@
 FROM apache/airflow:2.8.0
 
-# Install system deps and Node.js 18 for the Next.js frontend
+# Install system deps and Node.js 18 for the Next.js frontend (run as root)
 USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates gnupg && \
@@ -10,8 +10,6 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y --no-install-recommends nodejs supervisor && \
     rm -rf /var/lib/apt/lists/*
-
-USER airflow
 
 WORKDIR /opt/pacewise
 
@@ -32,10 +30,13 @@ RUN npm install && npm run build
 
 WORKDIR /opt/pacewise
 
-# Supervisor config and entrypoint
+# Supervisor config and entrypoint (still as root so we can chmod)
 COPY supervisord-airflow.conf /etc/supervisor/conf.d/supervisord-airflow.conf
 COPY railway-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
 RUN chmod +x /usr/local/bin/railway-entrypoint.sh
+
+# Switch back to airflow user for runtime
+USER airflow
 
 EXPOSE 8080 3000
 
