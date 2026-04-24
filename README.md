@@ -275,20 +275,11 @@ dbt test
 
 ---
 
-## Deployment notes (Railway)
+## Deployment
 
-This repo includes `Dockerfile.railway` and supporting scripts to run **Airflow + the dashboard** in a single app service, with a separate managed Postgres service for Airflow metadata.
+PaceWise can be deployed (e.g. on Railway) by running Airflow + the dashboard as an app service, backed by a managed Postgres database for Airflow metadata.
 
-At a high level:
-
-1. Create a managed Postgres service and obtain its connection URL.
-2. Create an app service from this repo using `Dockerfile.railway`.
-3. Set environment variables (at minimum):
-   - `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` (Railway Postgres URL in SQLAlchemy format)
-   - `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`
-   - `GOOGLE_APPLICATION_CREDENTIALS` (path to the mounted service-account key inside the container)
-   - `BIGQUERY_PROJECT_ID`, `BIGQUERY_DATASET`
-4. Expose port **3000** for the Next.js dashboard (Airflow UI exposure is optional and environment-dependent).
+For the full Railway guide (env vars, credentials mounting, and troubleshooting), see `docs/deployment/railway.md`.
 
 ---
 
