@@ -5,6 +5,8 @@ Handles token storage in a local JSON file, automatic token refresh,
 and paginated/incremental fetches of athlete activities.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import time

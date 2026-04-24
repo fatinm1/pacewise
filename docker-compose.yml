@@ -30,10 +30,13 @@ services:
       # So PythonOperator can import extract.runner
       PYTHONPATH: /opt/pacewise
       PACEWISE_PROJECT_ROOT: /opt/pacewise
+      # BigQuery key path inside container (host key mounted at ./keys)
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/pacewise/keys/service-account.json
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./dbt:/opt/pacewise/dbt
       - .:/opt/pacewise
+      - ./keys:/opt/pacewise/keys:ro
     ports:
       - "8080:8080"
     command: webserver
@@ -52,10 +55,12 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       PYTHONPATH: /opt/pacewise
       PACEWISE_PROJECT_ROOT: /opt/pacewise
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/pacewise/keys/service-account.json
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./dbt:/opt/pacewise/dbt
       - .:/opt/pacewise
+      - ./keys:/opt/pacewise/keys:ro
     command: scheduler
     depends_on:
       postgres:

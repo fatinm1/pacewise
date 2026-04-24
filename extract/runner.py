@@ -4,6 +4,8 @@ Orchestrates Strava extract and BigQuery load for idempotent incremental runs.
 Uses last_run_at from BigQuery _metadata to fetch only new activities.
 """
 
+from __future__ import annotations
+
 import os
 import time
 from typing import Any
@@ -48,7 +50,7 @@ def run_extract_and_load(
             )
 
     client = bigquery_loader.get_client(project_id)
-    bigquery_loader.ensure_dataset(client, project_id, dataset_id)
+    bigquery_loader.ensure_dataset(client, dataset_id)
     bigquery_loader.ensure_metadata_table(client, project_id, dataset_id)
     after = bigquery_loader.get_last_run_at(client, project_id, dataset_id)
 

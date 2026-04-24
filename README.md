@@ -1,6 +1,6 @@
 # PaceWise
 
-**A full-stack Strava analytics pipeline — from raw API data to a production-grade BigQuery warehouse and a modern holographic dashboard.**
+**A full-stack Strava analytics pipeline: extract from the Strava API, load into BigQuery, transform with dbt, and explore in a Next.js dashboard.**
 
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -18,11 +18,11 @@
 
 ## Overview
 
-Strava gives athletes a great place to log runs and rides, but its native analytics are limited. You can’t easily join your activity data with other sources, run custom SQL, or build dashboards that match how you think about training. **PaceWise** fixes that: it’s a production-style ELT pipeline that pulls your Strava data into BigQuery, transforms it with dbt, and surfaces it in a dark-mode dashboard with glassmorphism and Strava-orange glow.
+PaceWise is a production-style ELT project for athletes who want full control of their Strava data. It includes:
 
-The project has three pillars. **First**, a Python extraction layer that talks to the Strava API with OAuth, handles token refresh, and loads raw activities into BigQuery with incremental runs and metadata tracking. **Second**, a dbt project that turns raw tables into typed staging views and analytics marts (weekly performance, training load with rolling windows). **Third**, a Next.js 14 dashboard that consumes those marts (or mock data) and presents KPIs, charts, and a searchable activity table in a consistent design system.
-
-Everything is designed to run locally with Docker Compose (Airflow + Postgres) and a `pacewise-frontend` app, so you can own your data end-to-end.
+- **Extraction/load**: Python scripts that authenticate to Strava (OAuth), refresh tokens, and load activity data into BigQuery (incremental by default).
+- **Transformations**: dbt models that type/clean raw payloads and build analytics marts (weekly performance, training load).
+- **Dashboard**: a Next.js app that visualizes metrics and activity history (can run with mock data or connect to real data).
 
 ---
 
@@ -56,54 +56,25 @@ Everything is designed to run locally with Docker Compose (Airflow + Postgres) a
                     └─────────────────────────────────────────────┘
 ```
 
-- **Extraction layer** — Python 3.11 scripts use the Strava API with OAuth 2.0. Tokens are stored in a local JSON file and refreshed automatically. Activities are fetched with an optional `after` timestamp for incremental loads. The BigQuery loader creates `pacewise_raw.activities` and a `_metadata` table that stores `last_run_at` per pipeline so the next run only pulls new data.
-
-- **Storage layer** — Raw API payloads land in BigQuery in `pacewise_raw.activities`. Transformed outputs live in a separate dataset (e.g. `pacewise`) as dbt-managed tables and views. All pipeline state (e.g. last successful run) is in `pacewise_raw._metadata`.
-
-- **Transformation layer** — dbt-bigquery defines a staging view (`stg_activities`) that cleans and types the raw table, and two marts: weekly run performance and per-activity rolling 7d/28d distance. Schema tests run on every DAG run.
-
-- **Orchestration layer** — A single Airflow DAG (`pacewise_daily`) runs daily at 06:00 UTC: it executes the Python extract-and-load, then `dbt run`, then `dbt test`. Retries and optional email-on-failure keep the pipeline observable.
-
-- **Presentation layer** — A Next.js 14 app (TypeScript, Tailwind, Framer Motion, Recharts) serves the dashboard. It reads from typed API functions that can hit a real backend or fall back to mock data aligned with the dbt marts.
+- **Raw storage**: `pacewise_raw.activities` (raw payloads) and `pacewise_raw._metadata` (pipeline state, including the incremental cursor).
+- **Orchestration**: an Airflow DAG runs extract → dbt run → dbt test.
+- **Serving**: the dashboard can be run standalone (mock data) or wired to a backend/API that reads from your warehouse.
 
 ---
 
 ## Features
 
-### Pipeline features
-
-- **Incremental loads** — Only fetches activities since `last_run_at` from `_metadata`; no full reloads unless you reset state.
-- **Idempotent DAGs** — Safe to re-trigger the same DAG; metadata and loading logic prevent duplicate rows.
-- **Auto token refresh** — Strava access tokens are refreshed using `client_id`, `client_secret`, and `refresh_token` when expired.
-- **dbt schema tests** — Staging and marts are covered by tests (e.g. not_null, unique on `activity_id`); they run after every `dbt run` in the DAG.
-- **Metadata tracking** — `pacewise_raw._metadata` stores `pipeline_name` and `last_run_at` for observability and incremental cursors.
-- **Exponential backoff** — Strava API calls use retries with backoff on 429/5xx to handle rate limits and transient errors.
-
-### Dashboard features
-
-- **Real-time KPI cards** — Total distance, activity count, average pace, average heart rate; monospace numbers with optional count-up and glow.
-- **Weekly distance bar chart** — Holographic gradient fills, glass tooltips, grid and axis styling.
-- **Pace trend line chart** — Strava-orange line with glow and area fill; week-level aggregation.
-- **7-day vs 28-day rolling training load** — Dual-line chart plus a circular “acute:chronic ratio” indicator (green / yellow / red).
-- **Heart rate zone breakdown** — Stacked bar by week with zone colors from the design palette.
-- **Personal bests** — Grid of best 5K pace, longest run, most elevation, highest HR with holographic shimmer on values.
-- **Filterable activity table** — Search by name, filter by type (Run / Ride / Swim / All), pagination; glass styling and hover states.
-- **Glassmorphism dark UI** — Near-black background, glass cards (backdrop-blur, soft borders), Strava orange glow accents, corner brackets on featured cards.
+- **Incremental loads** using `pacewise_raw._metadata` to avoid full reloads.
+- **Token refresh** for Strava OAuth.
+- **Idempotent runs** (safe to re-run without duplicating data).
+- **dbt models + tests** for typed staging and analytics marts.
 
 ---
 
 ## Tech stack
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Extraction | Python 3.11, Requests | Strava API client, OAuth, pagination, token storage |
-| Orchestration | Apache Airflow 2.8 | DAG scheduling, retries, optional email alerts |
-| Storage | Google BigQuery | Raw and transformed data warehouse |
-| Transformation | dbt-bigquery | Staging views, mart models, schema tests |
-| Containerization | Docker, Docker Compose | Local Airflow + Postgres, single-command run |
-| Frontend | Next.js 14, TypeScript | Dashboard app, routing, API layer |
-| Styling | Tailwind CSS, Framer Motion | Layout, design tokens, animations |
-| Charts | Recharts | Bar, line, area, stacked bar, tooltips |
+- **Backend/pipeline**: Python 3.11, Apache Airflow, Google BigQuery, dbt (BigQuery adapter)
+- **Frontend**: Next.js 14 + TypeScript + Tailwind
 
 ---
 
@@ -170,50 +141,34 @@ pacewise/
 
 ### Prerequisites
 
-- **Python 3.11+** (for local extract/load if not using Docker only)
 - **Docker** and **Docker Compose**
-- **Node.js 18+** (for the frontend)
+- **Node.js 18+**
+- **Python 3.11+** (optional; useful if you run extraction/dbt outside Docker)
 - **Google Cloud** account with BigQuery enabled
 - **Strava** developer account ([strava.com/settings/api](https://www.strava.com/settings/api))
 
-### 🚀 Deploying on Railway (high level)
+### Configure Strava OAuth
 
-You can deploy PaceWise to Railway with **two services**:
+1. Create an app at [Strava API – Create & Manage Your App](https://www.strava.com/settings/api) and note **Client ID** and **Client Secret**.
+2. Complete the OAuth flow to obtain a **refresh token** with scope `activity:read_all`.
+3. Set `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, and `STRAVA_REFRESH_TOKEN` in `.env`.
 
-- **App service**: builds `Dockerfile.railway`, runs Airflow (webserver + scheduler) and the Next.js dashboard in one container.\n- **Database service**: a managed Postgres instance for Airflow metadata (BigQuery remains your analytics warehouse).
+See [Strava OAuth documentation](https://developers.strava.com/docs/authentication/).
 
-At a high level:
+### Configure Google Cloud / BigQuery
 
-1. Push this repo to GitHub (already done if you are reading this there).
-2. In Railway, create a **Postgres** service (DB cell) and note its connection URL.
-3. Create a **new service from repo** using `Dockerfile.railway` as the Dockerfile.\n4. Set environment variables on the app service:\n   - `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` = Railway Postgres URL (sqlalchemy format)\n   - `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`\n   - `GOOGLE_APPLICATION_CREDENTIALS` (path to mounted service-account key)\n   - `BIGQUERY_PROJECT_ID`, `BIGQUERY_DATASET`\n   - `AIRFLOW_ADMIN_EMAIL` (optional)\n5. Expose port **3000** for the Next.js dashboard (and optionally 8080 for Airflow via a reverse proxy or Railway settings).
+1. Enable the **BigQuery API** in your GCP project.
+2. Create a **service account** with permissions to create/write datasets and tables (e.g. BigQuery Data Editor; BigQuery Admin also works).
+3. Download a JSON key and set `GOOGLE_APPLICATION_CREDENTIALS` to its absolute path.
 
-`Dockerfile.railway`, `railway-entrypoint.sh`, and `supervisord-airflow.conf` are set up so a single Railway app cell can run **Airflow + the dashboard** together.
-
-### Step 1 — Clone the repo
+### Step 1 — Clone
 
 ```bash
 git clone https://github.com/fatinm1/pacewise.git
 cd pacewise
 ```
 
-### Step 2 — Strava OAuth setup
-
-1. Go to [Strava API – Create & Manage Your App](https://www.strava.com/settings/api).
-2. Create an application and note **Client ID** and **Client Secret**.
-3. Complete the OAuth 2.0 flow to obtain a **refresh token** (authorization URL, redirect URI, and token exchange). Use scope **`activity:read_all`** so the pipeline can read all activities.  
-   See [Strava OAuth documentation](https://developers.strava.com/docs/authentication/).
-4. Put the **refresh token** in `.env` as `STRAVA_REFRESH_TOKEN`. The pipeline will store and refresh the access token in a local file (e.g. `strava_tokens.json`).
-
-### Step 3 — Google Cloud setup
-
-1. Create a GCP project (or use an existing one).
-2. Enable the **BigQuery API**.
-3. Create a **service account** with the **BigQuery Data Editor** (or **BigQuery Admin**) role.
-4. Create a JSON key for the service account and download it.
-5. Set `GOOGLE_APPLICATION_CREDENTIALS` in `.env` to the **absolute path** of that JSON file (containers must see the same path; mount the file if needed).
-
-### Step 4 — Environment variables
+### Step 2 — Environment variables
 
 Copy the example env file and fill in your values:
 
@@ -221,27 +176,25 @@ Copy the example env file and fill in your values:
 cp .env.example .env
 ```
 
-Use this as a reference (comments inline):
+Minimum required values:
 
 ```bash
-# Strava OAuth — from strava.com/settings/api and your OAuth flow
 STRAVA_CLIENT_ID=your_client_id
 STRAVA_CLIENT_SECRET=your_client_secret
 STRAVA_REFRESH_TOKEN=your_refresh_token
 
-# BigQuery — path to service account JSON key; project and dataset
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/your-service-account-key.json
 BIGQUERY_PROJECT_ID=your-gcp-project-id
 BIGQUERY_DATASET=pacewise_raw
 
-# Airflow — optional; used for failure email alerts
+# Optional (Airflow failure notifications)
 AIRFLOW_ADMIN_EMAIL=your@email.com
 
-# Optional — path to Strava token file (default: strava_tokens.json)
+# Optional (default: ./strava_tokens.json)
 # STRAVA_TOKEN_FILE=./strava_tokens.json
 ```
 
-### Step 5 — Run the pipeline
+### Step 3 — Run Airflow (local)
 
 ```bash
 docker compose build
@@ -252,14 +205,16 @@ docker compose run --rm airflow-webserver airflow users create \
 docker compose up -d
 ```
 
-- Open the Airflow UI at **http://localhost:8080** (e.g. login: `admin` / `admin`).
-- Turn the **pacewise_daily** DAG **On** and click **Trigger DAG**.
-- After a successful run you should see:
-  - Raw data in `pacewise_raw.activities`
-  - Metadata in `pacewise_raw._metadata`
-  - dbt models built in your dbt target dataset (e.g. `pacewise`).
+Then:
 
-### Step 6 — Run the frontend
+- Open the Airflow UI at `http://localhost:8080` (login: `admin` / `admin`).
+- Turn **on** the `pacewise_daily` DAG and **Trigger DAG**.
+- Verify BigQuery outputs:
+  - `pacewise_raw.activities`
+  - `pacewise_raw._metadata`
+  - dbt models in your target dataset.
+
+### Step 4 — Run the dashboard
 
 ```bash
 cd pacewise-frontend
@@ -267,13 +222,16 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:3000**. The app uses mock data by default. To point it at a real API, set `NEXT_PUBLIC_API_URL` in the frontend env.
+Open `http://localhost:3000`.
+
+- By default the frontend uses **mock data**.
+- To connect to a real API, set `NEXT_PUBLIC_API_URL` in `pacewise-frontend/.env.local`.
 
 ---
 
 ## dbt models
 
-PaceWise uses a three-layer transformation approach.
+PaceWise uses a simple three-layer approach in BigQuery.
 
 ### Raw layer
 
@@ -285,23 +243,6 @@ PaceWise uses a three-layer transformation approach.
 - **Materialization**: view  
 - **Source**: `pacewise_raw.activities`  
 - **Purpose**: Typed, cleaned, renamed fields and one derived metric.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `activity_id` | INT64 | Strava activity ID (from `id`) |
-| `activity_name` | STRING | Name (from `name`) |
-| `distance_meters` | FLOAT64 | Distance in meters |
-| `moving_time_seconds` | INT64 | Moving time in seconds |
-| `elapsed_time_seconds` | INT64 | Elapsed time in seconds |
-| `total_elevation_gain` | FLOAT64 | Elevation gain in meters |
-| `activity_type` | STRING | e.g. Run, Ride, Swim (from `type`) |
-| `start_date` | TIMESTAMP | Activity start time |
-| `average_heartrate` | FLOAT64 | Nullable |
-| `max_heartrate` | FLOAT64 | Nullable |
-| `average_speed_ms` | FLOAT64 | Speed in m/s |
-| `pace_min_per_km` | FLOAT64 | `(1000 / average_speed_ms) / 60`; null when speed is 0 |
-
-Rows with null `activity_id` are filtered out.
 
 ### Mart layer
 
@@ -334,75 +275,20 @@ dbt test
 
 ---
 
-## Dashboard pages
+## Deployment notes (Railway)
 
-| Route | Description |
-|-------|-------------|
-| **/** | Dashboard: hero “YOUR PACE. YOUR DATA.”, KPI row (distance, activities, pace, HR), weekly distance bar chart, recent activities feed. |
-| **/performance** | Pace trend line chart, heart rate zone stacked bar by week, personal bests grid (best 5K, longest run, most elevation, highest HR). |
-| **/training-load** | 7-day vs 28-day rolling distance line chart and circular acute:chronic ratio indicator with status color (green / yellow / red). |
-| **/activities** | Full activity list: search by name, filter by type (Run / Ride / Swim / All), paginated table with date, name, type, distance, pace, time, HR. |
-| **/settings** | Placeholder for preferences and integrations. |
+This repo includes `Dockerfile.railway` and supporting scripts to run **Airflow + the dashboard** in a single app service, with a separate managed Postgres service for Airflow metadata.
 
----
+At a high level:
 
-## Design system
-
-### Color palette
-
-| Name | Hex | Usage |
-|------|-----|--------|
-| Background | `#080810` | Page and surface base |
-| Surface (glass) | `rgba(255,255,255,0.03)` | Card backgrounds |
-| Border | `rgba(255,255,255,0.08)` | Card and UI borders |
-| Primary glow | `#FC4C02` | Strava orange — KPIs, active states, chart accents |
-| Secondary glow | `#6366f1` | Indigo — secondary charts, variety |
-| Text primary | `#f1f5f9` | Headings and body |
-| Text muted | `#64748b` | Labels and secondary text |
-| Holographic gradient | Orange → rose → purple → indigo → cyan | Hero text, chart fills, accents |
-
-### Glass card spec
-
-- **Background**: `rgba(255, 255, 255, 0.03)`  
-- **Border**: `1px solid rgba(255, 255, 255, 0.08)`  
-- **Backdrop**: `backdrop-filter: blur(20px)`  
-- **Border radius**: `16px`  
-- **Shadow**: `0 0 40px rgba(252, 76, 2, 0.05)`, `inset 0 1px 0 rgba(255,255,255,0.06)`  
-- **Hover**: border shifts toward `rgba(252, 76, 2, 0.3)`, outer glow increases.
-
-### Glow system
-
-- **Active metrics / primary**: `text-shadow: 0 0 20px rgba(252, 76, 2, 0.8)`  
-- **Cards on hover**: stronger orange box-shadow  
-- **Charts**: Strava orange and indigo stroke/glow; status colors (e.g. green/yellow/red) for the acute:chronic ring.
-
-### Typography
-
-- **UI**: Inter (sans) for labels, buttons, and body text.  
-- **Metrics and numbers**: JetBrains Mono (monospace) for all numeric values and data-dense UI.
-
----
-
-## Roadmap
-
-**Done**
-
-- [x] Strava OAuth with auto token refresh
-- [x] Incremental BigQuery loading with `_metadata` tracking
-- [x] dbt staging and mart models (performance + training load)
-- [x] Airflow DAG with retries and optional email on failure
-- [x] Next.js dashboard with glass UI and design system
-- [x] Weekly performance charts and recent activities
-- [x] Training load rolling 7d/28d windows and acute:chronic indicator
-
-**Planned**
-
-- [ ] Segment performance tracking (e.g. per-mile splits)
-- [ ] GPX route map visualization
-- [ ] Multi-athlete support
-- [ ] Slack/email alerts for training milestones
-- [ ] Snowflake adapter as alternative to BigQuery
-- [ ] Public demo with anonymized data
+1. Create a managed Postgres service and obtain its connection URL.
+2. Create an app service from this repo using `Dockerfile.railway`.
+3. Set environment variables (at minimum):
+   - `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` (Railway Postgres URL in SQLAlchemy format)
+   - `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`
+   - `GOOGLE_APPLICATION_CREDENTIALS` (path to the mounted service-account key inside the container)
+   - `BIGQUERY_PROJECT_ID`, `BIGQUERY_DATASET`
+4. Expose port **3000** for the Next.js dashboard (Airflow UI exposure is optional and environment-dependent).
 
 ---
 
@@ -418,7 +304,7 @@ dbt test
 
 ## License
 
-MIT License. Feel free to use this for your own athletic data obsession.
+MIT License.
 
 ---
 

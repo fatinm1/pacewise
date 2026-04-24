@@ -1,5 +1,6 @@
 .env
 strava_tokens.json
+keys/
 dbt/target/
 dbt/dbt_packages/
 *.pyc
