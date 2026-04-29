@@ -159,7 +159,9 @@ See [Strava OAuth documentation](https://developers.strava.com/docs/authenticati
 
 1. Enable the **BigQuery API** in your GCP project.
 2. Create a **service account** with permissions to create/write datasets and tables (e.g. BigQuery Data Editor; BigQuery Admin also works).
-3. Download a JSON key and set `GOOGLE_APPLICATION_CREDENTIALS` to its absolute path.
+3. Download a JSON key:
+   - **Local dev**: set `GOOGLE_APPLICATION_CREDENTIALS` to the JSON file path on your machine.
+   - **Hosted/PaaS (e.g. Railway)**: do **not** use `/Users/...` paths from your laptop. Prefer mounting the key into the container **or** setting `GOOGLE_APPLICATION_CREDENTIALS_JSON` / `GOOGLE_APPLICATION_CREDENTIALS_B64` (see `.env.example`).
 
 ### Step 1 — Clone
 
@@ -186,6 +188,7 @@ STRAVA_REFRESH_TOKEN=your_refresh_token
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/your-service-account-key.json
 BIGQUERY_PROJECT_ID=your-gcp-project-id
 BIGQUERY_DATASET=pacewise_raw
+BIGQUERY_ANALYTICS_DATASET=pacewise
 
 # Optional (Airflow failure notifications)
 AIRFLOW_ADMIN_EMAIL=your@email.com
