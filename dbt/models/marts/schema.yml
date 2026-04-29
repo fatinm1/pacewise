@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: mart_athlete_summary
+    description: Single-row athlete summary for the dashboard header.
+    columns:
+      - name: total_activities
+        tests:
+          - not_null
+      - name: member_since
+        tests:
+          - not_null
+
+  - name: mart_hr_zones_weekly
+    description: Approximate weekly heart-rate zone distribution from average activity HR.
+    columns:
+      - name: week_start
+        tests:
+          - not_null
+      - name: zone_name
+        tests:
+          - not_null
+      - name: minutes
+        tests:
+          - not_null
+

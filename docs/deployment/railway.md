@@ -37,6 +37,7 @@ Set these on the **app** service:
 - `STRAVA_REFRESH_TOKEN`
 - `BIGQUERY_PROJECT_ID`
 - `BIGQUERY_DATASET` (example: `pacewise_raw`)
+- `BIGQUERY_ANALYTICS_DATASET` (example: `pacewise`) — dbt output dataset queried by the Next.js API
 
 #### BigQuery credentials (`GOOGLE_APPLICATION_CREDENTIALS`)
 
@@ -63,7 +64,15 @@ Important:
 3. Confirm BigQuery tables exist:
    - `pacewise_raw.activities`
    - `pacewise_raw._metadata`
-   - dbt models in your configured target dataset
+   - dbt models in your configured analytics dataset (e.g. `pacewise.*`)
+
+## Dashboard data mode
+
+By default the dashboard reads **real data** from the Next.js API routes running in the same container (which query BigQuery/dbt marts directly).
+
+Optional:
+
+- Set `NEXT_PUBLIC_USE_MOCK_DATA=1` to force the UI to use mock data (useful for demos/troubleshooting).
 
 ## Troubleshooting
 

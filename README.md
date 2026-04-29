@@ -224,8 +224,9 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-- By default the frontend uses **mock data**.
-- To connect to a real API, set `NEXT_PUBLIC_API_URL` in `pacewise-frontend/.env.local`.
+- By default the frontend uses the built-in **Next.js API routes** (`/api/*`) which query BigQuery/dbt marts directly.
+- To force UI-only mock mode, set `NEXT_PUBLIC_USE_MOCK_DATA=1` in `pacewise-frontend/.env.local`.
+- To point the dashboard at an external API instead, set `NEXT_PUBLIC_API_URL` in `pacewise-frontend/.env.local`.
 
 ---
 

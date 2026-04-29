@@ -210,63 +210,59 @@ const MOCK_ATHLETE: AthleteSummary = {
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const USE_MOCK =
+  (process.env.NEXT_PUBLIC_USE_MOCK_DATA ?? "").toLowerCase() === "1" ||
+  (process.env.NEXT_PUBLIC_USE_MOCK_DATA ?? "").toLowerCase() === "true";
 
 async function fetchApi<T>(path: string): Promise<T> {
-  if (!API_BASE) {
-    return Promise.resolve(getMock(path) as T);
-  }
-  const res = await fetch(`${API_BASE}${path}`);
+  if (USE_MOCK) return Promise.resolve(getMock(path) as T);
+
+  // If API_BASE is unset, default to same-origin Next.js route handlers.
+  const url = API_BASE ? `${API_BASE}${path}` : path;
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 function getMock(path: string): unknown {
-  if (path.includes("activities")) return MOCK_ACTIVITIES;
-  if (path.includes("weekly")) return MOCK_WEEKLY;
-  if (path.includes("training-load")) return MOCK_TRAINING_LOAD;
-  if (path.includes("personal-bests")) return MOCK_PERSONAL_BESTS;
-  if (path.includes("heart-rate-zones")) return MOCK_HR_ZONES;
-  if (path.includes("pace-trend")) return MOCK_PACE_TREND;
-  if (path.includes("athlete")) return MOCK_ATHLETE;
+  if (path.includes("/api/activities") || path === "activities") return MOCK_ACTIVITIES;
+  if (path.includes("/api/weekly") || path === "weekly") return MOCK_WEEKLY;
+  if (path.includes("/api/training-load") || path === "training-load") return MOCK_TRAINING_LOAD;
+  if (path.includes("/api/personal-bests") || path === "personal-bests") return MOCK_PERSONAL_BESTS;
+  if (path.includes("/api/heart-rate-zones") || path === "heart-rate-zones") return MOCK_HR_ZONES;
+  if (path.includes("/api/pace-trend") || path === "pace-trend") return MOCK_PACE_TREND;
+  if (path.includes("/api/athlete") || path === "athlete") return MOCK_ATHLETE;
   return [];
 }
 
 export async function getActivities(params?: { type?: string; limit?: number }): Promise<Activity[]> {
-  const path = API_BASE ? `/api/activities?${new URLSearchParams(params as Record<string, string>)}` : "activities";
-  const data = await fetchApi<Activity[]>(path);
-  const list = (data || MOCK_ACTIVITIES) as Activity[];
-  if (params?.type && params.type !== "All") {
-    return list.filter((a) => a.activity_type === params.type).slice(0, params?.limit ?? 50);
-  }
-  return (params?.limit ? list.slice(0, params.limit) : list) as Activity[];
+  const sp = new URLSearchParams();
+  if (params?.type && params.type !== "All") sp.set("type", params.type);
+  if (typeof params?.limit === "number") sp.set("limit", String(params.limit));
+  const path = `/api/activities${sp.toString() ? `?${sp.toString()}` : ""}`;
+  return fetchApi<Activity[]>(path);
 }
 
 export async function getWeeklyPerformance(): Promise<WeeklyPerformance[]> {
-  const data = await fetchApi<WeeklyPerformance[]>(API_BASE ? "/api/weekly" : "weekly");
-  return (data || MOCK_WEEKLY) as WeeklyPerformance[];
+  return fetchApi<WeeklyPerformance[]>("/api/weekly");
 }
 
 export async function getTrainingLoad(): Promise<TrainingLoadPoint[]> {
-  const data = await fetchApi<TrainingLoadPoint[]>(API_BASE ? "/api/training-load" : "training-load");
-  return (data || MOCK_TRAINING_LOAD) as TrainingLoadPoint[];
+  return fetchApi<TrainingLoadPoint[]>("/api/training-load");
 }
 
 export async function getPersonalBests(): Promise<PersonalBest[]> {
-  const data = await fetchApi<PersonalBest[]>(API_BASE ? "/api/personal-bests" : "personal-bests");
-  return (data || MOCK_PERSONAL_BESTS) as PersonalBest[];
+  return fetchApi<PersonalBest[]>("/api/personal-bests");
 }
 
 export async function getHeartRateZones(): Promise<HeartRateZoneBucket[]> {
-  const data = await fetchApi<HeartRateZoneBucket[]>(API_BASE ? "/api/heart-rate-zones" : "heart-rate-zones");
-  return (data || MOCK_HR_ZONES) as HeartRateZoneBucket[];
+  return fetchApi<HeartRateZoneBucket[]>("/api/heart-rate-zones");
 }
 
 export async function getPaceTrend(): Promise<PaceTrendPoint[]> {
-  const data = await fetchApi<PaceTrendPoint[]>(API_BASE ? "/api/pace-trend" : "pace-trend");
-  return (data || MOCK_PACE_TREND) as PaceTrendPoint[];
+  return fetchApi<PaceTrendPoint[]>("/api/pace-trend");
 }
 
 export async function getAthlete(): Promise<AthleteSummary> {
-  const data = await fetchApi<AthleteSummary>(API_BASE ? "/api/athlete" : "athlete");
-  return (data || MOCK_ATHLETE) as AthleteSummary;
+  return fetchApi<AthleteSummary>("/api/athlete");
 }

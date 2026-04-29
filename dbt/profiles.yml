@@ -6,6 +6,6 @@ pacewise:
       type: bigquery
       method: oauth  # or service-account with keyfile
       project: "{{ env_var('BIGQUERY_PROJECT_ID') }}"
-      dataset: pacewise
+      dataset: "{{ env_var('BIGQUERY_ANALYTICS_DATASET', 'pacewise') }}"
       threads: 4
       timeout_seconds: 300

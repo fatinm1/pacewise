@@ -8,3 +8,5 @@ sources:
     tables:
       - name: activities
         description: Raw activity records from Strava API
+      - name: _metadata
+        description: Pipeline state (incremental cursor / last sync time)
