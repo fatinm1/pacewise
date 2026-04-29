@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { getAnalyticsDatasetId, queryBigQuery } from "@/lib/bigquery";
 import type { HeartRateZoneBucket } from "@/types/strava";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
+  const projectId = process.env.BIGQUERY_PROJECT_ID;
+  if (!projectId) throw new Error("Missing required env var: BIGQUERY_PROJECT_ID");
+
   const dataset = getAnalyticsDatasetId();
   const sql = `
     select
@@ -11,7 +16,7 @@ export async function GET() {
       cast(zone_color as string) as zone_color,
       cast(minutes as float64) as minutes,
       cast(percentage as float64) as percentage
-    from \`${process.env.BIGQUERY_PROJECT_ID}.${dataset}.mart_hr_zones_weekly\`
+    from \`${projectId}.${dataset}.mart_hr_zones_weekly\`
     order by week_start, zone_name
   `;
 

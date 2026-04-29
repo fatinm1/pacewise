@@ -21,7 +21,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the whole project (Airflow DAGs, extract, dbt, frontend)
-COPY . .
+USER root
+COPY --chown=airflow:0 . .
+USER airflow
 
 # Link Airflow DAGs into AIRFLOW_HOME as expected by the base image.
 RUN mkdir -p /opt/airflow/dags && \

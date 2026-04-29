@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { getAnalyticsDatasetId, queryBigQuery } from "@/lib/bigquery";
 import type { PersonalBest } from "@/types/strava";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const dataset = getAnalyticsDatasetId();
   const project = process.env.BIGQUERY_PROJECT_ID;
+  if (!project) throw new Error("Missing required env var: BIGQUERY_PROJECT_ID");
 
   const sql = `
     with runs as (

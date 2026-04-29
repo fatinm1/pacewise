@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { queryBigQuery } from "@/lib/bigquery";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     // Cheap connectivity check
