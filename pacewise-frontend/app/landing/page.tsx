@@ -50,8 +50,11 @@ export default function LandingPage() {
               questions with your own SQL and charts.
             </p>
             <div className="flex flex-wrap items-center gap-4">
+              <Link href="/demo">
+                <GlowButton variant="primary">Try live demo</GlowButton>
+              </Link>
               <Link href="/">
-                <GlowButton variant="primary">Open dashboard</GlowButton>
+                <GlowButton variant="ghost">Open dashboard</GlowButton>
               </Link>
               <Link href="https://github.com/fatinm1/pacewise" target="_blank">
                 <GlowButton variant="ghost">View on GitHub</GlowButton>

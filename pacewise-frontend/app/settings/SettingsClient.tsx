@@ -1,13 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 
 export function SettingsClient() {
-  const useMock =
+  const pathname = usePathname();
+  const onDemoPath = pathname.startsWith("/demo");
+  const envMock =
     (process.env.NEXT_PUBLIC_USE_MOCK_DATA ?? "").toLowerCase() === "1" ||
     (process.env.NEXT_PUBLIC_USE_MOCK_DATA ?? "").toLowerCase() === "true";
+  const useMock = envMock || onDemoPath;
 
   return (
     <motion.div
@@ -28,11 +32,28 @@ export function SettingsClient() {
           </h2>
           <div className="mt-4 space-y-2 text-sm">
             <p className="font-sans text-text-primary">
-              {useMock ? "Mock data enabled" : "Real data enabled"}
+              {onDemoPath
+                ? "Interactive demo (sample data)"
+                : useMock
+                  ? "Mock data enabled"
+                  : "Real data enabled"}
             </p>
             <p className="font-sans text-text-muted">
-              Default is real data via the built-in Next.js API routes (`/api/*`). To force mock mode,
-              set `NEXT_PUBLIC_USE_MOCK_DATA=1`.
+              {onDemoPath ? (
+                <>
+                  You are on <span className="font-mono">/demo</span> routes: charts and tables use built-in sample
+                  data only.
+                </>
+              ) : (
+                <>
+                  Default is real data via the built-in Next.js API routes (`/api/*`). To force mock mode, set{" "}
+                  <span className="font-mono">NEXT_PUBLIC_USE_MOCK_DATA=1</span> or open the{" "}
+                  <a href="/demo" className="text-[#FC4C02] underline-offset-2 hover:underline">
+                    live demo
+                  </a>
+                  .
+                </>
+              )}
             </p>
           </div>
           <div className="mt-5">

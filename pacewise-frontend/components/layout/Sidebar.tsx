@@ -2,7 +2,6 @@
 
 import {
   LayoutDashboard,
-  Activity,
   TrendingUp,
   Loader2,
   ListOrdered,
@@ -13,16 +12,37 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/activities", label: "Activities", icon: ListOrdered },
-  { href: "/performance", label: "Performance", icon: TrendingUp },
-  { href: "/training-load", label: "Training Load", icon: Loader2 },
-  { href: "/settings", label: "Settings", icon: Settings },
+const NAV_DEF = [
+  { segment: "home" as const, label: "Dashboard", icon: LayoutDashboard },
+  { segment: "activities" as const, label: "Activities", icon: ListOrdered },
+  { segment: "performance" as const, label: "Performance", icon: TrendingUp },
+  { segment: "training-load" as const, label: "Training Load", icon: Loader2 },
+  { segment: "settings" as const, label: "Settings", icon: Settings },
 ];
+
+function navHref(demo: boolean, segment: (typeof NAV_DEF)[number]["segment"]): string {
+  if (demo) {
+    if (segment === "home") return "/demo";
+    return `/demo/${segment}`;
+  }
+  if (segment === "home") return "/";
+  return `/${segment}`;
+}
+
+function isNavActive(pathname: string, href: string): boolean {
+  if (href === "/" || href === "/demo") {
+    return pathname === href || pathname === `${href}/`;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function Sidebar() {
   const pathname = usePathname();
+  const demo = pathname.startsWith("/demo");
+  const NAV = NAV_DEF.map((item) => ({
+    ...item,
+    href: navHref(demo, item.segment),
+  }));
   const [hovered, setHovered] = useState(false);
   const expanded = hovered;
 
@@ -37,7 +57,7 @@ export function Sidebar() {
     >
       <nav className="flex flex-col gap-1 p-3 pt-24">
         {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          const active = isNavActive(pathname, href);
           return (
             <Link key={href} href={href} className="relative">
               <motion.span
