@@ -12,7 +12,10 @@ function asPositiveInt(v: string | null, fallback: number): number {
 
 export async function GET(req: Request) {
   const projectId = process.env.BIGQUERY_PROJECT_ID;
-  if (!projectId) throw new Error("Missing required env var: BIGQUERY_PROJECT_ID");
+  if (!projectId) {
+    // Allow builds/preview deployments to succeed without warehouse config.
+    return NextResponse.json([]);
+  }
 
   const url = new URL(req.url);
   const type = url.searchParams.get("type");

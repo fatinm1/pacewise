@@ -6,7 +6,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const projectId = process.env.BIGQUERY_PROJECT_ID;
-  if (!projectId) throw new Error("Missing required env var: BIGQUERY_PROJECT_ID");
+  if (!projectId) {
+    // Allow builds/preview deployments to succeed without warehouse config.
+    return NextResponse.json([]);
+  }
 
   const dataset = getAnalyticsDatasetId();
   const sql = `
