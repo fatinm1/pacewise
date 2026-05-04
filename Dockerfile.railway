@@ -29,9 +29,11 @@ USER airflow
 RUN mkdir -p /opt/airflow/dags && \
     if [ ! -e /opt/airflow/dags/pacewise ]; then ln -s /opt/pacewise/airflow/dags /opt/airflow/dags/pacewise; fi
 
-# Build the Next.js frontend
+# Build the Next.js frontend (clear GCP env for this layer so `next build` never requires BigQuery)
 WORKDIR /opt/pacewise/pacewise-frontend
-RUN npm install && npm run build
+RUN BIGQUERY_PROJECT_ID= PACEWISE_DATA_SOURCE=local GOOGLE_APPLICATION_CREDENTIALS= \
+    GOOGLE_APPLICATION_CREDENTIALS_JSON= GOOGLE_APPLICATION_CREDENTIALS_B64= \
+    npm install && npm run build
 
 WORKDIR /opt/pacewise
 

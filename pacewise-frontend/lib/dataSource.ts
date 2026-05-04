@@ -13,5 +13,5 @@ export function resolveServerDataSource(): ServerDataSource {
   const explicit = process.env.PACEWISE_DATA_SOURCE?.trim().toLowerCase();
   if (explicit === "local") return "local";
   if (explicit === "bigquery") return "bigquery";
-  return process.env.BIGQUERY_PROJECT_ID ? "bigquery" : "local";
+  return process.env.BIGQUERY_PROJECT_ID?.trim() ? "bigquery" : "local";
 }

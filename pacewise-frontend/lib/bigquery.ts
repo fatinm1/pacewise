@@ -2,12 +2,6 @@ import "server-only";
 
 import { BigQuery } from "@google-cloud/bigquery";
 
-function requiredEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing required env var: ${name}`);
-  return v;
-}
-
 function getServiceAccountJsonObject(): Record<string, unknown> | null {
   // Common patterns for PaaS deployments (Railway/Heroku-style) where mounting a file is awkward.
   const direct =
@@ -38,7 +32,12 @@ function getServiceAccountJsonObject(): Record<string, unknown> | null {
 }
 
 export function getBigQueryClient(): BigQuery {
-  const projectId = requiredEnv("BIGQUERY_PROJECT_ID");
+  const projectId = (process.env.BIGQUERY_PROJECT_ID ?? "").trim();
+  if (!projectId) {
+    throw new Error(
+      "BIGQUERY_PROJECT_ID is not set. Set it with valid GCP credentials, or use PACEWISE_DATA_SOURCE=local for file-based data."
+    );
+  }
   const credentials = getServiceAccountJsonObject();
   if (credentials) {
     return new BigQuery({ projectId, credentials });
@@ -83,7 +82,12 @@ export async function queryBigQuery<T>(
   sql: string,
   params?: Record<string, unknown>
 ): Promise<T[]> {
-  const projectId = process.env.BIGQUERY_PROJECT_ID ?? "";
+  const projectId = (process.env.BIGQUERY_PROJECT_ID ?? "").trim();
+  // Never call the BigQuery client without a project (avoids prerender/build failures).
+  if (!projectId) {
+    return [] as T[];
+  }
+
   const client = getBigQueryClient();
 
   try {
