@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 
@@ -12,6 +14,25 @@ export function SettingsClient() {
     (process.env.NEXT_PUBLIC_USE_MOCK_DATA ?? "").toLowerCase() === "1" ||
     (process.env.NEXT_PUBLIC_USE_MOCK_DATA ?? "").toLowerCase() === "true";
   const useMock = envMock || onDemoPath;
+  const [health, setHealth] = useState<{
+    status: "idle" | "loading" | "done";
+    dataSource: "local" | "bigquery" | null;
+  }>({ status: "idle", dataSource: null });
+
+  useEffect(() => {
+    if (onDemoPath || useMock) {
+      setHealth({ status: "done", dataSource: null });
+      return;
+    }
+    setHealth({ status: "loading", dataSource: null });
+    fetch("/api/health", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { data_source?: string }) => {
+        const ds = j.data_source === "local" || j.data_source === "bigquery" ? j.data_source : null;
+        setHealth({ status: "done", dataSource: ds });
+      })
+      .catch(() => setHealth({ status: "done", dataSource: null }));
+  }, [onDemoPath, useMock]);
 
   return (
     <motion.div
@@ -44,25 +65,61 @@ export function SettingsClient() {
                   You are on <span className="font-mono">/demo</span> routes: charts and tables use built-in sample
                   data only.
                 </>
-              ) : (
+              ) : useMock ? (
                 <>
-                  Default is real data via the built-in Next.js API routes (`/api/*`). To force mock mode, set{" "}
+                  The UI is using mock data from <span className="font-mono">NEXT_PUBLIC_USE_MOCK_DATA</span>. Remove
+                  it to talk to the real API, or open the{" "}
+                  <a href="/demo" className="text-[#FC4C02] underline-offset-2 hover:underline">
+                    /demo
+                  </a>{" "}
+                  routes for a guided sample experience.
+                </>
+              ) : health.status === "loading" ? (
+                <>Checking server data source…</>
+              ) : health.dataSource === "local" ? (
+                <>
+                  Server is using <strong>local file storage</strong> (no Google Cloud). Activities come from bundled
+                  samples until you import GPX files.{" "}
+                  <Link href="/import" className="text-[#FC4C02] underline-offset-2 hover:underline">
+                    Import GPX
+                  </Link>
+                  .
+                </>
+              ) : health.dataSource === "bigquery" ? (
+                <>
+                  API routes read from <strong>BigQuery</strong> (warehouse + dbt marts). For free, self-hosted data
+                  without Google Cloud, unset <span className="font-mono">BIGQUERY_PROJECT_ID</span> or set{" "}
+                  <span className="font-mono">PACEWISE_DATA_SOURCE=local</span>. To force UI-only mock mode, set{" "}
                   <span className="font-mono">NEXT_PUBLIC_USE_MOCK_DATA=1</span> or open the{" "}
                   <a href="/demo" className="text-[#FC4C02] underline-offset-2 hover:underline">
                     live demo
                   </a>
                   .
                 </>
+              ) : (
+                <>
+                  Could not read the server data mode. Open <span className="font-mono">/api/health</span> to debug, or
+                  check <span className="font-mono">PACEWISE_DATA_SOURCE</span> and{" "}
+                  <span className="font-mono">BIGQUERY_PROJECT_ID</span>.
+                </>
               )}
             </p>
+            {!onDemoPath && !useMock && health.status === "done" && health.dataSource && (
+              <p className="font-mono text-xs text-text-muted">Server reports: {health.dataSource}</p>
+            )}
           </div>
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap gap-3">
             <GlowButton
               variant="ghost"
               onClick={() => window.open("/api/health", "_blank")}
             >
               Open /api/health
             </GlowButton>
+            {!onDemoPath && !useMock && health.dataSource === "local" && (
+              <Link href="/import">
+                <GlowButton variant="primary">Import GPX</GlowButton>
+              </Link>
+            )}
           </div>
         </GlassCard>
 
@@ -72,9 +129,9 @@ export function SettingsClient() {
           </h2>
           <div className="mt-4 space-y-2 text-sm">
             <p className="font-sans text-text-muted">
-              HR zones are currently an approximation built from <span className="font-mono">average_heartrate</span>{" "}
-              per activity (Strava’s activities endpoint does not provide time-in-zone). The model converts
-              each activity’s moving time into minutes and buckets it into Z1–Z5 using a configured max HR.
+              HR zones are an approximation from <span className="font-mono">average_heartrate</span> per activity
+              (GPX imports do not include per-second HR buckets). Moving time is split across Z1–Z5 using a max HR and
+              zone thresholds—same idea as the dbt mart in BigQuery mode.
             </p>
             <ul className="mt-2 space-y-1 font-mono text-xs text-text-muted">
               <li>HR_MAX_BPM (default 190)</li>
@@ -84,7 +141,8 @@ export function SettingsClient() {
               <li>HR_ZONE_Z4_MAX (default 0.90)</li>
             </ul>
             <p className="font-sans text-text-muted">
-              These are applied in the dbt model <span className="font-mono">mart_hr_zones_weekly</span>.
+              In BigQuery mode these come from the dbt model <span className="font-mono">mart_hr_zones_weekly</span>; in
+              local mode the API computes the same bucketing in TypeScript.
             </p>
           </div>
         </GlassCard>

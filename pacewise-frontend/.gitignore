@@ -11,6 +11,9 @@ build/
 # Env
 .env*.local
 
+# Local activity store (GPX / free mode)
+data/
+
 # Debug
 npm-debug.log*
 yarn-debug.log*

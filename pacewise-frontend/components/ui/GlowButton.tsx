@@ -7,6 +7,7 @@ interface GlowButtonProps {
   children: ReactNode;
   variant?: "primary" | "ghost";
   className?: string;
+  type?: "button" | "submit";
   onClick?: () => void;
   disabled?: boolean;
 }
@@ -15,13 +16,14 @@ export function GlowButton({
   children,
   variant = "primary",
   className = "",
+  type = "button",
   onClick,
   disabled = false,
 }: GlowButtonProps) {
   if (variant === "ghost") {
     return (
       <motion.button
-        type="button"
+        type={type}
         disabled={disabled}
         onClick={onClick}
         className={`
@@ -41,7 +43,7 @@ export function GlowButton({
 
   return (
     <motion.button
-      type="button"
+      type={type}
       disabled={disabled}
       onClick={onClick}
       className={`

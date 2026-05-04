@@ -6,26 +6,31 @@ import {
   Loader2,
   ListOrdered,
   Settings,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
-const NAV_DEF = [
+const NAV_ALL = [
   { segment: "home" as const, label: "Dashboard", icon: LayoutDashboard },
   { segment: "activities" as const, label: "Activities", icon: ListOrdered },
+  { segment: "import" as const, label: "Import GPX", icon: Upload },
   { segment: "performance" as const, label: "Performance", icon: TrendingUp },
   { segment: "training-load" as const, label: "Training Load", icon: Loader2 },
   { segment: "settings" as const, label: "Settings", icon: Settings },
-];
+] as const;
 
-function navHref(demo: boolean, segment: (typeof NAV_DEF)[number]["segment"]): string {
+type NavSegment = (typeof NAV_ALL)[number]["segment"];
+
+function navHref(demo: boolean, segment: NavSegment): string {
   if (demo) {
     if (segment === "home") return "/demo";
     return `/demo/${segment}`;
   }
   if (segment === "home") return "/";
+  if (segment === "import") return "/import";
   return `/${segment}`;
 }
 
@@ -39,7 +44,8 @@ function isNavActive(pathname: string, href: string): boolean {
 export function Sidebar() {
   const pathname = usePathname();
   const demo = pathname.startsWith("/demo");
-  const NAV = NAV_DEF.map((item) => ({
+  const navSource = demo ? NAV_ALL.filter((item) => item.segment !== "import") : [...NAV_ALL];
+  const NAV = navSource.map((item) => ({
     ...item,
     href: navHref(demo, item.segment),
   }));

@@ -1,27 +1,9 @@
 import { NextResponse } from "next/server";
-import { getAnalyticsDatasetId, queryBigQuery } from "@/lib/bigquery";
-import type { PaceTrendPoint } from "@/types/strava";
+import { serverGetPaceTrend } from "@/lib/serverData";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const projectId = process.env.BIGQUERY_PROJECT_ID;
-  if (!projectId) {
-    // Allow builds/preview deployments to succeed without warehouse config.
-    return NextResponse.json([]);
-  }
-
-  const dataset = getAnalyticsDatasetId();
-  const sql = `
-    select
-      cast(week_start as string) as week_start,
-      cast(avg_pace_min_per_km as float64) as avg_pace_min_per_km
-    from \`${projectId}.${dataset}.mart_athlete_performance\`
-    where avg_pace_min_per_km is not null
-    order by week_start
-  `;
-
-  const rows = await queryBigQuery<PaceTrendPoint>(sql);
+  const rows = await serverGetPaceTrend();
   return NextResponse.json(rows);
 }
-
