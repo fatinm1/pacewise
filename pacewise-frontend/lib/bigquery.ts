@@ -67,19 +67,48 @@ export type QueryParam =
   | { name: string; parameterType: { type: string }; parameterValue: { value: unknown } }
   | { name: string; parameterType: { type: string }; parameterValue: { value: string } };
 
+function formatBigQueryIamHint(projectId: string, original: string): string {
+  const trimmed = original.length > 800 ? `${original.slice(0, 800)}…` : original;
+  return (
+    `BigQuery denied access for project "${projectId}". ` +
+      "The credential needs at least: (1) roles/bigquery.jobUser — includes bigquery.jobs.create — and " +
+      "(2) roles/bigquery.dataViewer or roles/bigquery.dataEditor on the datasets you query (or project-level Data Viewer/Editor). " +
+      "In GCP Console: IAM & Admin → grant those roles to your service account. " +
+      "To run the dashboard without BigQuery, unset BIGQUERY_PROJECT_ID or set PACEWISE_DATA_SOURCE=local. " +
+      `API detail: ${trimmed}`
+  );
+}
+
 export async function queryBigQuery<T>(
   sql: string,
   params?: Record<string, unknown>
 ): Promise<T[]> {
+  const projectId = process.env.BIGQUERY_PROJECT_ID ?? "";
   const client = getBigQueryClient();
 
-  const [job] = await client.createQueryJob({
-    query: sql,
-    location: process.env.BIGQUERY_LOCATION ?? "US",
-    params,
-  });
+  try {
+    const [job] = await client.createQueryJob({
+      query: sql,
+      location: process.env.BIGQUERY_LOCATION ?? "US",
+      params,
+    });
 
-  const [rows] = await job.getQueryResults();
-  return rows as T[];
+    const [rows] = await job.getQueryResults();
+    return rows as T[];
+  } catch (err) {
+    const raw =
+      err instanceof Error
+        ? err.message
+        : typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: unknown }).message)
+          : String(err);
+    if (
+      /403|PERMISSION_DENIED|accessDenied|bigquery\.jobs\.create|Access Denied/i.test(raw) &&
+      projectId
+    ) {
+      throw new Error(formatBigQueryIamHint(projectId, raw));
+    }
+    throw err;
+  }
 }
 

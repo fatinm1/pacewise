@@ -55,6 +55,15 @@ Important:
 - Don’t commit the JSON key to git.
 - If you use file paths, ensure the file exists **inside the container** at runtime (Railway won’t magically map macOS paths).
 
+#### BigQuery IAM (403 `bigquery.jobs.create` / Access Denied)
+
+The service account must be able to **create query jobs** and **read** your datasets. In Google Cloud Console → **IAM & Admin** → **IAM**, grant the principal matching your JSON key at least:
+
+- **BigQuery Job User** (`roles/bigquery.jobUser`) — required for `bigquery.jobs.create`.
+- **BigQuery Data Viewer** on the analytics dataset (or **BigQuery Data Editor** at project scope if you manage tables there) — so queries against `stg_*` / `mart_*` succeed.
+
+If you prefer to run the Next.js app **without** BigQuery (local JSON + GPX import only), unset `BIGQUERY_PROJECT_ID` or set `PACEWISE_DATA_SOURCE=local` and redeploy.
+
 ### 3) Expose ports
 
 - Expose **3000** for the Next.js dashboard.

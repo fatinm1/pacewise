@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { TopBar } from "@/components/layout/TopBar";
+import { AppShell } from "@/components/layout/AppShell";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,11 +34,7 @@ export default function RootLayout({
               "radial-gradient(ellipse 80% 50% at 20% 0%, rgba(252, 76, 2, 0.03), transparent)",
           }}
         />
-        <Sidebar />
-        <div className="relative pl-16">
-          <TopBar />
-          <main className="min-h-[calc(100vh-3.5rem)] p-6">{children}</main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
