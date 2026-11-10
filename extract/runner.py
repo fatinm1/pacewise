@@ -53,6 +53,10 @@ def run_extract_and_load(
     bigquery_loader.ensure_dataset(client, dataset_id)
     bigquery_loader.ensure_metadata_table(client, project_id, dataset_id)
     after = bigquery_loader.get_last_run_at(client, project_id, dataset_id)
+    # Replay a bounded overlap for delayed/updated activities. Downstream models dedupe by ID.
+    if after is not None:
+        after = max(0, after - 24 * 60 * 60)
+    run_started_at = int(time.time())
 
     activities = strava_client.fetch_all_activities(
         strava_client_id, strava_client_secret, after=after, token_path=path
@@ -62,5 +66,5 @@ def run_extract_and_load(
         dataset_id,
         activities,
         upsert_metadata_after=True,
-        last_run_at=int(time.time()),
+        last_run_at=run_started_at,
     )

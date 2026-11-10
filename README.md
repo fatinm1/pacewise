@@ -309,3 +309,9 @@ MIT License.
 - **dbt** for making SQL transformations versioned and testable.  
 - **Apache Airflow** for reliable pipeline orchestration.  
 - **Vercel** for frontend hosting and deployment.
+
+## Failure handling and data correctness
+
+Raw ingestion is at-least-once. Failed rows, including partial insert failures, stop checkpoint advancement. Extraction replays a 24-hour window; `_loaded_at` identifies the latest ingested version and the staging view deduplicates activity IDs before analytics. Existing raw tables receive the nullable timestamp column on the next load. Run extraction once before deploying the updated dbt model. Historical duplicates with no timestamp have no known version ordering. Updates older than the replay window require an explicit backfill.
+
+Run offline loader regression tests with `python -m pytest tests -q` after installing pytest and google-cloud-bigquery. These tests use a mocked BigQuery client; they do not establish a successful cloud deployment or measured cost savings. Existing dbt quality checks require a configured BigQuery environment.

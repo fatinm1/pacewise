@@ -63,6 +63,7 @@ def activities_schema() -> list[SchemaField]:
     """
     return [
         SchemaField("id", "INTEGER", mode="REQUIRED"),
+        SchemaField("_loaded_at", "TIMESTAMP", mode="NULLABLE"),
         SchemaField("name", "STRING", mode="NULLABLE"),
         SchemaField("distance", "FLOAT", mode="NULLABLE"),
         SchemaField("moving_time", "INTEGER", mode="NULLABLE"),
@@ -105,7 +106,10 @@ def ensure_activities_table(
         field="start_date",
     )
     try:
-        client.get_table(table_id)
+        existing = client.get_table(table_id)
+        if "_loaded_at" not in {field.name for field in existing.schema}:
+            existing.schema = [*existing.schema, SchemaField("_loaded_at", "TIMESTAMP")]
+            client.update_table(existing, ["schema"])
         return table_id
     except Exception:
         client.create_table(table, exists_ok=False)
@@ -271,16 +275,19 @@ def load_activities(
     ensure_metadata_table(client, project_id, dataset_id)
 
     table_id = f"{project_id}.{dataset_id}.activities"
-    rows = [_activity_to_row(a) for a in activities]
+    from datetime import datetime, timezone
+    loaded_at = datetime.now(timezone.utc).isoformat()
+    rows = [{**_activity_to_row(a), "_loaded_at": loaded_at} for a in activities]
     if not rows:
         if upsert_metadata_after:
             upsert_metadata(client, project_id, dataset_id, last_run_at)
         return 0, 0
 
-    errors = client.insert_rows_json(table_id, rows)
+    errors = client.insert_rows_json(table_id, rows, row_ids=[f"{row['id']}:{loaded_at}" for row in rows])
     inserted = len(rows) - len(errors)
-    if errors and len(errors) == len(rows):
-        raise RuntimeError(f"All rows failed to insert: {errors[:3]}...")
+    if errors:
+        # Never advance the checkpoint past rejected rows, including partial failures.
+        raise RuntimeError(f"Rows failed to insert; checkpoint unchanged: {errors[:3]}")
     if upsert_metadata_after:
         upsert_metadata(client, project_id, dataset_id, last_run_at)
     return inserted, len(errors)

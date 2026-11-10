@@ -6,6 +6,7 @@
 
 with source as (
     select * from {{ source('pacewise_raw', 'activities') }}
+    qualify row_number() over (partition by id order by _loaded_at desc nulls last) = 1
 ),
 
 renamed as (
